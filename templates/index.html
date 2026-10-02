@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spam Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#FFDC5F;
+    --blue:#001840;
+    --blue-soft:#123570;
+    --cream:#FFF9DD;
+    --white:#FFFFFF;
+    --muted:#D9E2FF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:linear-gradient(135deg, var(--blue) 0%, #072c68 100%); color:var(--white); font-family:'Source Serif 4', serif; padding:32px 18px 64px;}
+  .wrap{max-width:620px;margin:0 auto; background:rgba(255,255,255,0.06); border:1px solid rgba(255,220,95,0.5); border-radius:18px; padding:28px 24px; box-shadow:0 12px 35px rgba(0,0,0,0.25);}
+  .kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--yellow);margin:0 0 8px;letter-spacing:1.5px;text-transform:uppercase;}
+  h1{font-size:30px;margin:0 0 18px;font-weight:700;color:var(--yellow);}
+
+  textarea{
+    width:100%; min-height:110px; padding:14px 16px;
+    font-family:'IBM Plex Mono',monospace; font-size:14px;
+    border:2px solid rgba(255,220,95,0.9); background:var(--cream); color:var(--blue); resize:vertical; border-radius:12px; outline:none;
+  }
+  textarea:focus{box-shadow:0 0 0 3px rgba(255,220,95,0.25);}
+  button{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:14px;
+    background:var(--yellow); color:var(--blue); border:none; padding:12px 20px; cursor:pointer; border-radius:999px; font-weight:700; transition:transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  button:hover{background:#ffe67d; transform:translateY(-1px); box-shadow:0 8px 20px rgba(255,220,95,0.25);}
+
+  #error{color:#ffd7d7; font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:12px; min-height:18px;}
+
+  .result{display:none; margin-top:28px; padding:18px 20px; border:1px solid rgba(255,220,95,0.7); background:rgba(255,249,221,0.12); border-radius:14px;}
+  .verdict{font-size:24px; font-weight:700; margin:0 0 10px;}
+  .verdict.spam{color:#ffcf8a;}
+  .verdict.ham{color:var(--yellow);}
+  .confidence-track{height:12px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,220,95,0.7); border-radius:999px; margin-top:8px; overflow:hidden;}
+  .confidence-fill{height:100%; background:linear-gradient(90deg, var(--yellow), #ffe98b); width:0%; transition:width 0.3s ease; border-radius:999px;}
+  .confidence-label{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">naive bayes text classifier</p>
+  <h1>Is this message spam?</h1>
+
+  <textarea id="input" placeholder="e.g. Congratulations! You've won a free prize, click here to claim now!"></textarea>
+  <div><button onclick="check()">Check message</button></div>
+  <div id="error"></div>
+
+  <div class="result" id="result">
+    <p class="verdict" id="verdict"></p>
+    <div class="confidence-track"><div class="confidence-fill" id="confidenceFill"></div></div>
+    <p class="confidence-label" id="confidenceLabel"></p>
+  </div>
+</div>
+
+<script>
+async function check() {
+  const message = document.getElementById('input').value.trim();
+  const errorBox = document.getElementById('error');
+  const resultBox = document.getElementById('result');
+  errorBox.textContent = '';
+
+  if (!message) {
+    errorBox.textContent = 'Type a message first.';
+    resultBox.style.display = 'none';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: message})
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      errorBox.textContent = data.error || 'Something went wrong.';
+      resultBox.style.display = 'none';
+      return;
+    }
+
+    const isSpam = data.prediction === 'spam';
+    const verdict = document.getElementById('verdict');
+    verdict.textContent = isSpam ? 'SPAM' : 'NOT SPAM';
+    verdict.className = 'verdict ' + (isSpam ? 'spam' : 'ham');
+
+    document.getElementById('confidenceFill').style.width = data.spam_probability + '%';
+    document.getElementById('confidenceLabel').textContent =
+      data.spam_probability + '% probability of being spam';
+
+    resultBox.style.display = 'block';
+  } catch (err) {
+    errorBox.textContent = 'Could not reach the server. Is app.py running?';
+  }
+}
+</script>
+</body>
+</html>

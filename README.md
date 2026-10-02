@@ -46,7 +46,7 @@ Confusion matrix (test set):
 ## Project Structure
 
 ```
-sms-spam-detector/
+sms_spam_detector/
 ├── SMSSpamCollection    # Dataset
 ├── train_model.py       # Trains, evaluates, and saves the model
 ├── app.py               # Flask app that serves predictions
@@ -59,8 +59,8 @@ sms-spam-detector/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/ayank4520-wq/sms-spam-detector.git
-   cd sms-spam-detector
+   git clone https://github.com/ayank4520-wq/sms_spam_detector.git
+   cd sms_spam_detector
    ```
 
 2. **(Optional) Create a virtual environment**

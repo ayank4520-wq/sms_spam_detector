@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spam Detector</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
   :root{
     --yellow:#FFDC5F;
@@ -13,64 +15,175 @@
     --cream:#FFF9DD;
     --white:#FFFFFF;
     --muted:#D9E2FF;
+    --peach:#FFCF8A;
+    --alert:#FFD7D7;
+    --serif:'Instrument Serif', Georgia, serif;
+    --sans:'Instrument Sans', system-ui, sans-serif;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:linear-gradient(135deg, var(--blue) 0%, #072c68 100%); color:var(--white); font-family:'Source Serif 4', serif; padding:32px 18px 64px;}
-  .wrap{max-width:620px;margin:0 auto; background:rgba(255,255,255,0.06); border:1px solid rgba(255,220,95,0.5); border-radius:18px; padding:28px 24px; box-shadow:0 12px 35px rgba(0,0,0,0.25);}
-  .kicker{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--yellow);margin:0 0 8px;letter-spacing:1.5px;text-transform:uppercase;}
-  h1{font-size:30px;margin:0 0 18px;font-weight:700;color:var(--yellow);}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--blue); color:var(--white);
+    font-family:var(--sans); font-size:16px; line-height:1.5;
+    padding:clamp(24px,6vw,72px) clamp(16px,5vw,40px) 96px;
+  }
+  .wrap{max-width:760px; margin:0 auto;}
+  :focus-visible{outline:3px solid var(--yellow); outline-offset:3px;}
 
+  h1{
+    font-family:var(--serif); font-weight:400; color:var(--yellow);
+    font-size:clamp(46px,9vw,88px); line-height:.98; letter-spacing:-0.015em;
+    margin:0 0 16px;
+  }
+  .lede{margin:0 0 36px; color:var(--muted); font-size:18px; max-width:34em;}
+
+  /* ---------- the message, drawn as the bubble you received ---------- */
+  label{display:block; margin:0 0 10px; font-weight:600; color:var(--white);}
+  .bubble{position:relative;}
   textarea{
-    width:100%; min-height:110px; padding:14px 16px;
-    font-family:'IBM Plex Mono',monospace; font-size:14px;
-    border:2px solid rgba(255,220,95,0.9); background:var(--cream); color:var(--blue); resize:vertical; border-radius:12px; outline:none;
+    display:block; width:100%; min-height:150px; padding:18px 20px 40px;
+    font-family:var(--sans); font-size:18px; line-height:1.5;
+    color:var(--blue); background:var(--cream);
+    border:none; border-radius:22px 22px 22px 6px; resize:vertical;
   }
-  textarea:focus{box-shadow:0 0 0 3px rgba(255,220,95,0.25);}
+  textarea::placeholder{color:#5B6C8F;}
+  .count{
+    position:absolute; right:18px; bottom:12px; font-size:13px; color:#5B6C8F;
+    font-variant-numeric:tabular-nums; pointer-events:none;
+  }
+
+  .actions{display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center; margin-top:18px;}
   button{
-    font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:14px;
-    background:var(--yellow); color:var(--blue); border:none; padding:12px 20px; cursor:pointer; border-radius:999px; font-weight:700; transition:transform 0.2s ease, box-shadow 0.2s ease;
+    font-family:var(--sans); font-size:16px; font-weight:600; cursor:pointer;
+    border-radius:999px; padding:12px 24px; border:2px solid transparent;
+    transition:background .15s, border-color .15s, color .15s;
   }
-  button:hover{background:#ffe67d; transform:translateY(-1px); box-shadow:0 8px 20px rgba(255,220,95,0.25);}
+  .primary{background:var(--yellow); color:var(--blue);}
+  .primary:hover{background:#ffe67d;}
+  .primary:disabled{opacity:.6; cursor:progress;}
+  .ghost{background:transparent; color:var(--white); border-color:var(--blue-soft); padding:10px 18px; font-size:15px;}
+  .ghost:hover{border-color:var(--yellow); color:var(--yellow);}
 
-  #error{color:#ffd7d7; font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:12px; min-height:18px;}
+  #message{margin:16px 0 0; min-height:1.5em; color:var(--alert); font-weight:600;}
 
-  .result{display:none; margin-top:28px; padding:18px 20px; border:1px solid rgba(255,220,95,0.7); background:rgba(255,249,221,0.12); border-radius:14px;}
-  .verdict{font-size:24px; font-weight:700; margin:0 0 10px;}
-  .verdict.spam{color:#ffcf8a;}
-  .verdict.ham{color:var(--yellow);}
-  .confidence-track{height:12px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,220,95,0.7); border-radius:999px; margin-top:8px; overflow:hidden;}
-  .confidence-fill{height:100%; background:linear-gradient(90deg, var(--yellow), #ffe98b); width:0%; transition:width 0.3s ease; border-radius:999px;}
-  .confidence-label{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px;}
+  /* ---------- result ---------- */
+  .result{
+    display:grid; grid-template-columns:auto 1fr; gap:28px 40px; align-items:center;
+    margin-top:40px; padding:32px; background:var(--blue-soft); border-radius:22px;
+  }
+  .result[hidden]{display:none;}
+
+  .stamp{
+    display:inline-flex; align-items:center; gap:14px;
+    font-family:var(--serif); font-size:clamp(40px,7vw,60px); line-height:1;
+    padding:14px 24px 16px; border:4px solid var(--yellow); border-radius:14px;
+    transform:rotate(-4deg); color:var(--yellow); white-space:nowrap;
+  }
+  .stamp svg{width:.8em; height:.8em; flex:none;}
+  .stamp.spam{background:var(--peach); border-color:var(--peach); color:var(--blue);}
+  .stamp.thump{animation:thump .4s cubic-bezier(.2,.9,.3,1.2) both;}
+  @keyframes thump{
+    from{transform:rotate(-12deg) scale(1.5); opacity:0;}
+    to{transform:rotate(-4deg) scale(1); opacity:1;}
+  }
+
+  .chance{margin:0; font-family:var(--serif); font-size:clamp(44px,8vw,64px); line-height:1; color:var(--white);}
+  .chance span{font-family:var(--sans); font-size:17px; color:var(--muted); margin-left:10px;}
+  .explain{margin:10px 0 22px; font-size:18px; color:var(--cream); max-width:30em;}
+
+  .meter{position:relative; height:14px; background:var(--blue); border-radius:999px;}
+  .meter-fill{height:100%; width:0; background:var(--yellow); border-radius:999px; transition:width .6s cubic-bezier(.2,.7,.2,1);}
+  .meter-mid{position:absolute; left:50%; top:-5px; bottom:-5px; width:2px; background:var(--cream); opacity:.7;}
+  .scale{display:flex; justify-content:space-between; margin-top:10px; font-size:14px; color:var(--muted);}
+  .scale .mid{position:absolute; left:50%; transform:translateX(-50%);}
+  .scale-row{position:relative;}
+
+  @media (max-width:640px){
+    .result{grid-template-columns:1fr; padding:24px 20px;}
+    .stamp{justify-self:start;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .stamp.thump{animation:none;}
+    .meter-fill, button{transition:none;}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <p class="kicker">naive bayes text classifier</p>
+<main class="wrap">
   <h1>Is this message spam?</h1>
+  <p class="lede">Paste a text message below. The model checks it and tells you how likely it is to be spam.</p>
 
-  <textarea id="input" placeholder="e.g. Congratulations! You've won a free prize, click here to claim now!"></textarea>
-  <div><button onclick="check()">Check message</button></div>
-  <div id="error"></div>
-
-  <div class="result" id="result">
-    <p class="verdict" id="verdict"></p>
-    <div class="confidence-track"><div class="confidence-fill" id="confidenceFill"></div></div>
-    <p class="confidence-label" id="confidenceLabel"></p>
+  <label for="input">The message you received</label>
+  <div class="bubble">
+    <textarea id="input" placeholder="Congratulations! You've won a free prize, click here to claim now!"></textarea>
+    <span class="count" id="count">0 characters</span>
   </div>
-</div>
+
+  <div class="actions">
+    <button class="primary" id="checkBtn" type="button">Check message</button>
+    <button class="ghost" id="spamEx" type="button">Try a spam example</button>
+    <button class="ghost" id="hamEx" type="button">Try a normal message</button>
+  </div>
+  <p id="message" role="status" aria-live="polite"></p>
+
+  <section class="result" id="result" hidden aria-live="polite" aria-label="Result">
+    <div class="stamp" id="stamp"></div>
+    <div>
+      <p class="chance"><b id="chanceNum"></b><span>chance this is spam</span></p>
+      <p class="explain" id="explain"></p>
+      <div class="meter" role="img" id="meterA11y">
+        <div class="meter-fill" id="fill"></div>
+        <div class="meter-mid"></div>
+      </div>
+      <div class="scale-row">
+        <div class="scale"><span>Not spam</span><span>Spam</span></div>
+        <span class="scale mid">50%</span>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
+const $ = id => document.getElementById(id);
+
+const EXAMPLES = {
+  spam: "WINNER!! As a valued network customer you have been selected to receive a \u00a3900 prize reward! To claim call 09061701461. Claim code KL341. Valid 12 hours only.",
+  ham: "Hey, running about 10 minutes late. Can you grab us a table? I'll text you when I'm outside."
+};
+
+const ICON_SPAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v10M12 19.5v.5"/></svg>';
+const ICON_HAM  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+
+function setMessage(text) { $('message').textContent = text || ''; }
+
+function updateCount() {
+  const n = $('input').value.length;
+  $('count').textContent = n + (n === 1 ? ' character' : ' characters');
+}
+
+function explanation(p, isSpam) {
+  if (isSpam) {
+    if (p >= 90) return "Almost certainly spam. Don't click links, call numbers or reply.";
+    if (p >= 70) return "Looks like spam. Be careful with any link or request for money or details.";
+    return "Leans toward spam. Check who sent it before you act on it.";
+  }
+  if (p < 20) return "Looks like a normal message.";
+  return "Probably fine, but the model isn't certain. Check the sender if it asks for anything.";
+}
+
 async function check() {
-  const message = document.getElementById('input').value.trim();
-  const errorBox = document.getElementById('error');
-  const resultBox = document.getElementById('result');
-  errorBox.textContent = '';
+  const message = $('input').value.trim();
+  setMessage('');
 
   if (!message) {
-    errorBox.textContent = 'Type a message first.';
-    resultBox.style.display = 'none';
+    $('result').hidden = true;
+    setMessage('Paste a message first, then press Check message.');
+    $('input').focus();
     return;
   }
+
+  const btn = $('checkBtn');
+  btn.disabled = true; btn.textContent = 'Checking\u2026';
 
   try {
     const response = await fetch('/api/predict', {
@@ -81,25 +194,55 @@ async function check() {
     const data = await response.json();
 
     if (!response.ok) {
-      errorBox.textContent = data.error || 'Something went wrong.';
-      resultBox.style.display = 'none';
+      $('result').hidden = true;
+      setMessage(data.error || "The model couldn't check this message. Try again.");
       return;
     }
-
-    const isSpam = data.prediction === 'spam';
-    const verdict = document.getElementById('verdict');
-    verdict.textContent = isSpam ? 'SPAM' : 'NOT SPAM';
-    verdict.className = 'verdict ' + (isSpam ? 'spam' : 'ham');
-
-    document.getElementById('confidenceFill').style.width = data.spam_probability + '%';
-    document.getElementById('confidenceLabel').textContent =
-      data.spam_probability + '% probability of being spam';
-
-    resultBox.style.display = 'block';
+    showResult(data);
   } catch (err) {
-    errorBox.textContent = 'Could not reach the server. Is app.py running?';
+    $('result').hidden = true;
+    setMessage("Can't reach the server. Start it with python app.py, then try again.");
+  } finally {
+    btn.disabled = false; btn.textContent = 'Check message';
   }
 }
+
+function showResult(data) {
+  const isSpam = data.prediction === 'spam';
+  const p = Math.min(100, Math.max(0, Number(data.spam_probability) || 0));
+  const shown = (Math.round(p * 10) / 10) + '%';
+
+  const stamp = $('stamp');
+  stamp.className = 'stamp ' + (isSpam ? 'spam' : 'ham');
+  stamp.innerHTML = (isSpam ? ICON_SPAM : ICON_HAM) + '<span>' + (isSpam ? 'Spam' : 'Not spam') + '</span>';
+
+  $('chanceNum').textContent = shown;
+  $('explain').textContent = explanation(p, isSpam);
+  $('meterA11y').setAttribute('aria-label', shown + ' probability of spam');
+
+  const fill = $('fill');
+  fill.style.width = '0%';
+  $('result').hidden = false;
+
+  void stamp.offsetWidth;                 // restart the one-time stamp animation
+  stamp.classList.add('thump');
+  requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = p + '%'; }));
+}
+
+function useExample(kind) {
+  $('input').value = EXAMPLES[kind];
+  updateCount();
+  check();
+}
+
+$('checkBtn').addEventListener('click', check);
+$('spamEx').addEventListener('click', () => useExample('spam'));
+$('hamEx').addEventListener('click', () => useExample('ham'));
+$('input').addEventListener('input', updateCount);
+$('input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); check(); }
+});
+updateCount();
 </script>
 </body>
 </html>
